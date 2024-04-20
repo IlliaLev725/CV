@@ -1,0 +1,15 @@
+- hosts: all
+  
+
+  tasks:
+    - name: add docker group
+      group: 
+        name: docker
+        state: present
+      become: true  
+
+    - name: add user to group
+      user: 
+        name: "{{ ansible_user }}"
+        groups: "{{ ansible_user }}, docker"
+      become: true

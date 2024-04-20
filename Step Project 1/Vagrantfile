@@ -1,0 +1,74 @@
+Vagrant.configure("2") do |config|
+  # Конфігурація VM1
+  config.vm.define "vm1" do |vm1|
+    vm1.vm.box = "bento/ubuntu-22.04"
+    vm1.vm.network "public_network"
+    vm1.vm.hostname = "VM1"
+    vm1.vm.provider "virtualbox" do |vb|
+      vb.memory = 2000
+      vb.cpus = 2
+    end
+    # Процедура інсталяції на VM1
+    vm1.vm.provision "shell", inline: <<-SHELL
+      # Оновлення пакетів
+      sudo apt-get update
+
+      # Інсталяція MySQL Server 
+      sudo apt-get install -y mysql-server
+      mysql -u root -e 'CREATE DATABASE Shop;'
+      # Prometheus MySQL Exporter
+      sudo wget https://github.com/prometheus/mysqld_exporter/releases/download/v0.13.0/mysqld_exporter-0.13.0.linux-amd64.tar.gz -P /tmp
+      sudo tar xvf /tmp/mysqld_exporter-0.13.0.linux-amd64.tar.gz -C /tmp
+      sudo mv /tmp/mysqld_exporter-0.13.0.linux-amd64/mysqld_exporter /usr/local/bin/
+      # Node exporter
+      apt-get install -y vim 
+      wget https://github.com/prometheus/node_exporter/releases/download/v1.3.1/node_exporter-1.3.1.linux-amd64.tar.gz
+      tar xvf node_exporter-1.3.1.linux-amd64.tar.gz
+      sudo cp node_exporter-1.3.1.linux-amd64/node_exporter /usr/local/bin/
+      rm -rf ./node_exporter-1.3.1.linux-amd64
+
+    SHELL
+    vm1.vm.provision "shell", inline: "sudo tee /etc/systemd/system/node_exporter.service <<EOF
+    [Unit]
+    Description=Node Exporter
+
+    [Service]
+    ExecStart=/usr/local/bin/node_exporter
+
+    [Install]
+    WantedBy=multi-user.target
+    EOF"
+  end
+
+  # Конфігурація VM2
+  config.vm.define "vm2" do |vm2|
+    vm2.vm.box = "bento/ubuntu-22.04"
+    vm2.vm.network "public_network"
+    vm2.vm.hostname = "VM2"
+    vm2.vm.provider "virtualbox" do |vb|
+      vb.memory = 2000
+      vb.cpus = 2
+    end
+    # Процедура інсталяції на VM2
+    vm2.vm.provision "shell", inline: <<-SHELL
+      # Оновлення пакетів
+      sudo apt-get update
+      apt-get install -y vim 
+      # Інсталяція Grafana Prometheus Alertmanager
+      sudo apt-get install -y apt-transport-https software-properties-common wget
+      sudo mkdir -p /etc/apt/keyrings/\
+    #Graphana
+      wget -q -O - https://apt.grafana.com/gpg.key | gpg --dearmor | sudo tee /etc/apt/keyrings/grafana.gpg > /dev/null
+      echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" | sudo tee -a /etc/apt/sources.list.d/grafana.list
+      sudo apt-get update
+      sudo apt-get install -y grafana
+      # Встановлення Prometheus
+      apt-get update
+      apt-get install -y prometheus
+      # Alert Manager
+      wget https://github.com/prometheus/alertmanager/releases/download/v0.26.0/alertmanager-0.26.0.linux-amd64.tar.gz
+      tar -xvzf alertmanager-0.26.0.linux-amd64.tar.gz
+      sudo mv alertmanager-0.26.0.linux-amd64/alertmanager /usr/local/bin/
+    SHELL
+  end
+end
