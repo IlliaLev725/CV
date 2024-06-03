@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend-server
+  template:
+    metadata:
+      labels:
+        app: backend-server
+    spec:
+      containers:
+      - name: backend-server
+        image: illialev/step-final:v0.0.3
+        ports:
+        - containerPort: 5000  
+
